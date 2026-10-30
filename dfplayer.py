@@ -18,9 +18,8 @@ class DFPlayer:
 
     EVENT_FINISHED = 3
 
-    def __init__(self, tx_uart, rx_uart):
-        self.tx = tx_uart
-        self.rx = rx_uart
+    def __init__(self, uart):
+        self.uart = uart
         self.ready = False
 
     @staticmethod
@@ -39,7 +38,7 @@ class DFPlayer:
         return frame
 
     def send(self, command, parameter=0, ack=0):
-        self.tx.write(self._frame(command, parameter, ack))
+        self.uart.write(self._frame(command, parameter, ack))
         sleep_ms(20)
 
     def begin(self):
@@ -70,8 +69,8 @@ class DFPlayer:
     def _read_frame(self, timeout_ms=120):
         start = ticks_ms()
         while ticks_diff(ticks_ms(), start) < timeout_ms:
-            if self.rx.any():
-                data = self.rx.read()
+            if self.uart.any():
+                data = self.uart.read()
                 if not data:
                     continue
                 for i in range(0, max(0, len(data) - 9)):
@@ -82,8 +81,8 @@ class DFPlayer:
 
     def _query(self, command, parameter=0):
         try:
-            while self.rx.any():
-                self.rx.read()
+            while self.uart.any():
+                self.uart.read()
         except Exception:
             pass
         self.send(command, parameter, 1)
@@ -102,9 +101,9 @@ class DFPlayer:
 
     def poll_event(self):
         try:
-            if not self.rx.any():
+            if not self.uart.any():
                 return 0
-            data = self.rx.read()
+            data = self.uart.read()
             if not data:
                 return 0
             for i in range(0, max(0, len(data) - 9)):
@@ -119,7 +118,7 @@ class DFPlayer:
 
     def flush_rx(self):
         try:
-            while self.rx.any():
-                self.rx.read()
+            while self.uart.any():
+                self.uart.read()
         except Exception:
             pass
