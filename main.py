@@ -149,23 +149,18 @@ class Player:
         self.spi = SPI(1, baudrate=SPI_BAUDRATE, polarity=0, phase=0)
         self.rfid = MFRC522(self.spi, Pin(RFID_SS_PIN, Pin.OUT, value=1), None)
 
-        # UART0 is normally the MicroPython REPL. We need its RX for DFPlayer
-        # feedback, so detach the REPL before creating the UART object.
+        # UART0 is normally the MicroPython REPL. We need it for the DFPlayer
+        # full duplex link, so detach the REPL before creating the UART object.
         try:
             uos.dupterm(None, 1)
         except Exception:
             pass
 
-        # UART1 TX GPIO2 -> DFPlayer RX through 1 kOhm.
-        # UART0 RX GPIO3 <- DFPlayer TX.
-        # UART0 TX GPIO1 is never written by this program and remains WS2812 DATA.
-        self.df_tx_uart = UART(1, baudrate=DFPLAYER_BAUD, bits=8, parity=None, stop=1)
-        try:
-            self.df_rx_uart = UART(0, baudrate=DFPLAYER_BAUD, bits=8, parity=None,
-                                   stop=1, rx=Pin(DFPLAYER_TX_PIN), tx=Pin(1))
-        except TypeError:
-            self.df_rx_uart = UART(0, baudrate=DFPLAYER_BAUD)
-        self.df = DFPlayer(self.df_tx_uart, self.df_rx_uart)
+        # GPIO1/TX -> DFPlayer RX through 1 kOhm.
+        # GPIO3/RX <- DFPlayer TX.
+        self.df_uart = UART(0, baudrate=DFPLAYER_BAUD, bits=8, parity=None,
+                            stop=1, tx=Pin(DFPLAYER_TX_PIN), rx=Pin(DFPLAYER_RX_PIN))
+        self.df = DFPlayer(self.df_uart)
 
         self.tags = TagDatabase(TAG_DB_FILE)
         self.current_folder = 0
