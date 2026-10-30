@@ -1,68 +1,101 @@
-# music_player
+# music_player — MicroPython
 
-Compact refrigerator-mounted vinyl/NFC music player.
+Полностью Python-прошивка для холодильного мини-проигрывателя с физическими виниловыми дисками/NFC.
 
-## Frozen project rule
+## Зафиксированное правило проекта
 
-**One physical vinyl disc = one NTAG215 UID = one digital album folder.**
+**1 физический диск = 1 NTAG215 UID = 1 цифровой альбом = 1 папка на microSD.**
 
-- The RC522 reads the NTAG215 UID.
-- The ESP8266 stores the UID-to-folder association in EEPROM.
-- The first unknown tag is assigned to folder `01`, the second to `02`, etc.
-- Once assigned, a tag always activates the same folder.
-- `Previous` and `Next` are controlled by the ESP8266 using `currentFolder` + `currentTrack`, so they cannot jump to another album.
-- EC11 rotation changes DFPlayer volume 0..30.
-- EC11 push is Play/Pause.
-- Removing the disc for a stable interval stops music, motor and LEDs.
-- No Hall sensor is used.
+- RC522 читает UID NTAG215.
+- ESP8266 сохраняет соответствие UID → папка в `tagmap.json` во внутренней файловой системе MicroPython.
+- Первый неизвестный тег получает папку `01`, следующий `02` и т.д.
+- После сохранения один и тот же UID всегда открывает ту же папку.
+- `Previous` и `Next` работают только через `current_folder + current_track`.
+- Команды глобального `next()`/`previous()` DFPlayer для переключения альбомов не используются.
+- EC11: вращение = громкость 0–30, нажатие = Play/Pause.
+- При устойчивом отсутствии NFC-тега останавливаются музыка, мотор и WS2812.
+- Hall sensor не используется.
 
-## Approved hardware only
+## Язык и платформа
+
+- **Язык:** Python / MicroPython.
+- **Плата:** NodeMCU V3 LoLin ESP8266.
+- **Среда выполнения:** MicroPython ESP8266.
+- Никаких Arduino `.ino`, C/C++ библиотек и установки внешних Python-пакетов на плату не требуется.
+- В репозитории находятся собственные минимальные драйверы `mfrc522.py` и `dfplayer.py`.
+- `neopixel` берётся из стандартной поставки MicroPython.
+
+## Утверждённое железо — без добавления новых компонентов
 
 - NodeMCU V3 LoLin ESP8266
 - RC522 / MFRC522
 - NTAG215
 - DFPlayer Mini / MP3-TF-16P
 - microSD 16/32 GB FAT32
-- GA12-N20 3-6 V ~70 RPM motor
-- HW-532 / LR7843 logic MOSFET module
+- GA12-N20 3–6 V, около 70 RPM
+- HW-532 / LR7843 logic-level MOSFET module
 - WS2812B 8 LED ring
-- 4 Ohm 3 W passive speaker
+- 4 Ω 3 W passive speaker
 - IP5306 USB-C charger/boost module
 - 3.7 V 2000 mAh ZLPBEES battery
 - 1N5819 flyback diode
-- 470-1000 uF rail capacitor
-- 100 uF capacitor(s)
-- 0.1 uF ceramic capacitors
-- 1 kOhm resistor
-- 330-470 Ohm resistor
+- 470–1000 µF capacitor on 5 V rail
+- 100 µF capacitor(s)
+- 0.1 µF ceramic capacitors
+- 1 kΩ resistor
+- 330–470 Ω resistor
 - EC11 encoder with push button
 - two approved large tactile buttons
-- Dupont/wiring, belt, pulleys, axle/bearing and magnets
+- Dupont wires, belt, pulleys, axle/bearing, magnets
 
-No IRF520N is used.
+**IRF520N не используется.**
 
-## Firmware
+## Файлы прошивки
 
-Arduino IDE + ESP8266 board package.
+```text
+music_player/
+├── main.py          # основной цикл проигрывателя
+├── config.py        # фиксированная распайка и параметры
+├── mfrc522.py       # собственный MicroPython-драйвер RC522
+├── dfplayer.py      # собственный MicroPython-драйвер DFPlayer
+├── README.md
+├── WIRING.md
+├── SD_STRUCTURE.md
+└── SELF_TEST.md
+```
 
-Libraries:
+При загрузке на плату достаточно этих `.py` файлов. `main.py` запускается MicroPython автоматически после перезагрузки.
 
-1. `MFRC522`
-2. `DFRobotDFPlayerMini`
-3. `Adafruit NeoPixel`
-4. `SoftwareSerial` supplied by the ESP8266 Arduino core
+## Финальная распайка
 
-The main sketch is `music_player.ino`.
+| Функция | NodeMCU | GPIO |
+|---|---:|---:|
+| RC522 SCK | D5 | GPIO14 |
+| RC522 MISO | D6 | GPIO12 |
+| RC522 MOSI | D7 | GPIO13 |
+| RC522 SDA/SS | D8 | GPIO15 |
+| RC522 RST | 3.3V | — |
+| DFPlayer RX | D4 | GPIO2 через 1 kΩ |
+| DFPlayer TX | RX | GPIO3 |
+| EC11 A | D1 | GPIO5 |
+| EC11 B | D3 | GPIO0 |
+| EC11 SW | D2 | GPIO4 |
+| Motor control | D0 | GPIO16 |
+| WS2812 DATA | TX | GPIO1 |
+| Previous/Next | A0 | ADC0 |
 
-## SD card
+В Python-прошивке DFPlayer использует оба UART ESP8266: отправка команд идёт через UART1 TX GPIO2, ответы/события читаются через UART0 RX GPIO3. GPIO1 не используется для отправки команд DFPlayer и остаётся линией DATA кольца WS2812.
 
-Use FAT32. Numbered folders:
+## SD-карта
+
+FAT32:
 
 ```text
 SD/
 ├── 01/
 │   ├── 001.mp3
 │   ├── 002.mp3
+│   ├── 003.mp3
 │   └── ...
 ├── 02/
 │   ├── 001.mp3
@@ -74,64 +107,50 @@ SD/
     └── ...
 ```
 
-The firmware asks DFPlayer for the number of files in the active folder. The intended album size is about 10-15 tracks.
+DFPlayer использует `playFolder(folder, file)`. Для определения числа треков активного альбома прошивка использует команду чтения количества файлов в папке `0x4E`; если конкретный клон DFPlayer не отвечает на запрос, применяется безопасный резервный лимит 15 треков.
 
-## Final pin map
-
-| Function | NodeMCU | ESP8266 GPIO | Module |
-|---|---:|---:|---|
-| RC522 SCK | D5 | GPIO14 | RC522 SCK |
-| RC522 MISO | D6 | GPIO12 | RC522 MISO |
-| RC522 MOSI | D7 | GPIO13 | RC522 MOSI |
-| RC522 SDA/SS | D8 | GPIO15 | RC522 SDA/SS |
-| RC522 RST | 3.3V | — | RC522 RST |
-| DFPlayer RX | D2 | GPIO4 | DFPlayer RX through 1k |
-| DFPlayer TX | RX | GPIO3 | DFPlayer TX |
-| Encoder A | D1 | GPIO5 | EC11 A |
-| Encoder B | D3 | GPIO0 | EC11 B |
-| Encoder SW | D4 | GPIO2 | EC11 push |
-| Motor control | D0 | GPIO16 | HW-532/LR7843 input |
-| WS2812 DATA | TX | GPIO1 | Ring DATA |
-| Track buttons | A0 | ADC | analog resistor ladder |
-
-### Important boot/upload note
-
-D3/GPIO0 and D4/GPIO2 are ESP8266 boot-strapping pins. Keep the EC11 released during power-up/reset. Do not press the encoder during flashing.
-
-The NodeMCU `RX` pin is shared with the USB-UART converter. For normal standalone operation, disconnect USB after flashing. If the DFPlayer TX wire is already installed, temporarily disconnect that one wire during firmware upload to avoid contention with the USB-UART TX line.
-
-## Power
+## Логика работы
 
 ```text
-USB-C
-  |
-  v
-IP5306
-  |---- B+ / B- ---- 3.7 V battery
-  |
-  +---- 5 V BUS --------------------+
-                                    |
-          +-------------------------+------------------+
-          |                         |                  |
-       NodeMCU VIN             DFPlayer VCC       WS2812 5V
-          |                         |                  |
-       3.3V rail                 speaker           ring
-          |
-        RC522 VCC
-
-5V BUS -> motor -> motor MOSFET -> GND
-All GNDs common.
+NTAG215 на диске
+      ↓
+RC522 → UID
+      ↓
+UID → tagmap.json
+      ↓
+folder 01/02/03...
+      ↓
+track = 001
+      ↓
+DFPlayer
+      ├── Previous → предыдущий трек этой папки
+      ├── Next     → следующий трек этой папки
+      └── конец трека → следующий трек этой папки
 ```
 
-RC522 is powered from NodeMCU 3.3 V, never 5 V.
+При замене диска старый альбом останавливается, новый UID становится активным, выбирается его папка и начинается первый трек.
 
-DFPlayer speaker is connected directly between `SPK1` and `SPK2`. Neither speaker wire goes to GND.
+## Загрузка
 
-## First startup behavior
+1. На NodeMCU должен быть установлен MicroPython для ESP8266.
+2. Скопировать на файловую систему платы:
+   - `main.py`
+   - `config.py`
+   - `mfrc522.py`
+   - `dfplayer.py`
+3. Подготовить microSD по `SD_STRUCTURE.md`.
+4. Собрать железо по `WIRING.md`.
+5. Перезагрузить NodeMCU.
+6. Установить первый диск — он автоматически получит папку `01`.
 
-1. Flash firmware.
-2. Prepare SD card.
-3. Put the first finished vinyl/tag on the RC522 area.
-4. Its UID is automatically stored as folder `01`.
-5. The next unknown tag becomes folder `02`, etc.
-6. Do not move tags between physical discs after assignment unless the EEPROM mapping is intentionally reset in firmware.
+## Важное по boot-пинам
+
+GPIO0 используется EC11 B и является boot strap pin. На EC11 используется внутренний pull-up, поэтому **при включении/сбросе не нажимать EC11**.
+
+GPIO2 используется UART1 TX для DFPlayer RX. Не подключать к нему никаких дополнительных внешних цепей кроме утверждённого входа RX DFPlayer через 1 kΩ.
+
+GPIO16 используется только как управление мотором и не применяется для NeoPixel.
+
+## Сброс привязок NFC
+
+Файл `tagmap.json` хранит UID → папка. Если нужно начать нумерацию альбомов заново, удалить `tagmap.json` с файловой системы NodeMCU. После следующего запуска первый неизвестный тег снова получит `01`.
