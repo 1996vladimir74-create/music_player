@@ -6,10 +6,9 @@ RFID_SS_PIN = 15       # D8
 RFID_RST_PIN = None    # RC522 RST is physically tied to 3.3 V
 SPI_BAUDRATE = 1000000
 
-# DFPlayer Mini
-# UART1 TX is GPIO2. UART0 RX is GPIO3.
-DFPLAYER_RX_PIN = 2    # D4 / GPIO2 -> DFPlayer RX through approved 1 kOhm
-DFPLAYER_TX_PIN = 3    # RX / GPIO3 <- DFPlayer TX
+# DFPlayer Mini / UART0
+DFPLAYER_RX_PIN = 3    # RX / GPIO3 <- DFPlayer TX
+DFPLAYER_TX_PIN = 1    # TX / GPIO1 -> DFPlayer RX through approved 1 kOhm
 DFPLAYER_BAUD = 9600
 
 # EC11 encoder
@@ -20,7 +19,7 @@ ENCODER_DIRECTION = 1
 
 # Motor / LEDs
 MOTOR_PIN = 16         # D0 / GPIO16 -> HW-532 / LR7843 control input
-LED_DATA_PIN = 1       # TX / GPIO1 -> WS2812 DATA
+LED_DATA_PIN = 2       # D4 / GPIO2 -> WS2812 DATA
 LED_COUNT = 8
 
 # Two large buttons through the approved analog ladder
