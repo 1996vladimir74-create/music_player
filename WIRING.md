@@ -41,17 +41,17 @@ The firmware enables internal pull-ups. Encoder must be released during reset/up
 
 ## Track buttons
 
-The two buttons share A0 through the already-approved resistor ladder.
+The two buttons share A0 through the already-approved resistor ladder. Only one 1 kOhm and one 330-470 Ohm resistor are used.
 
 ```text
 3.3V --- 1 kOhm --- A0
                     |
-                    +--- button PREVIOUS --- 330 Ohm --- GND
+                    +--- button PREVIOUS ---------------- GND
                     |
-                    +--- button NEXT ------- 1 kOhm ----- GND
+                    +--- button NEXT ------- 330-470 Ohm - GND
 ```
 
-The firmware recognizes the two voltage regions and ignores simultaneous press.
+The firmware recognizes the two voltage regions. This uses exactly the approved resistor markings and does not add a new resistor value.
 
 ## Motor
 
