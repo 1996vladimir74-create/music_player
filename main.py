@@ -149,10 +149,16 @@ class Player:
         self.spi = SPI(1, baudrate=SPI_BAUDRATE, polarity=0, phase=0)
         self.rfid = MFRC522(self.spi, Pin(RFID_SS_PIN, Pin.OUT, value=1), None)
 
-        # DFPlayer uses both ESP8266 UARTs without adding any hardware:
+        # UART0 is normally the MicroPython REPL. We need its RX for DFPlayer
+        # feedback, so detach the REPL before creating the UART object.
+        try:
+            uos.dupterm(None, 1)
+        except Exception:
+            pass
+
         # UART1 TX GPIO2 -> DFPlayer RX through 1 kOhm.
         # UART0 RX GPIO3 <- DFPlayer TX.
-        # UART0 TX GPIO1 is not written by the program and is used for WS2812 DATA.
+        # UART0 TX GPIO1 is never written by this program and remains WS2812 DATA.
         self.df_tx_uart = UART(1, baudrate=DFPLAYER_BAUD, bits=8, parity=None, stop=1)
         try:
             self.df_rx_uart = UART(0, baudrate=DFPLAYER_BAUD, bits=8, parity=None,
@@ -306,10 +312,9 @@ class Player:
                 self.poll_controls()
                 self.poll_dfplayer()
                 sleep_ms(2)
-            except Exception as exc:
+            except Exception:
                 self.motor_off()
                 self.leds_off()
-                print("PLAYER ERROR:", exc)
                 sleep_ms(1000)
                 gc.collect()
 
