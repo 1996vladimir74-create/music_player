@@ -2,17 +2,16 @@ from time import sleep_ms, ticks_ms, ticks_diff
 
 
 class MFRC522:
-    # PCD commands
     PCD_IDLE = 0x00
     PCD_CALC_CRC = 0x03
     PCD_TRANSCEIVE = 0x0C
     PCD_SOFT_RESET = 0x0F
 
-    # PICC commands
     PICC_REQA = 0x26
     PICC_WUPA = 0x52
     PICC_ANTICOLL_CL1 = 0x93
     PICC_ANTICOLL_CL2 = 0x95
+    PICC_HALT = 0x50
 
     STATUS_OK = 0
     STATUS_TIMEOUT = 1
@@ -29,8 +28,6 @@ class MFRC522:
     BitFramingReg = 0x0D
     CollReg = 0x0E
     ModeReg = 0x11
-    TxModeReg = 0x12
-    RxModeReg = 0x13
     TxControlReg = 0x14
     TxASKReg = 0x15
     RFCfgReg = 0x26
@@ -94,7 +91,7 @@ class MFRC522:
 
     def _transceive(self, send_data, valid_bits=0, timeout_ms=30):
         self._write(self.CommandReg, self.PCD_IDLE)
-        self._write(self.ComIEnReg, 0x77 | 0x80)
+        self._write(self.ComIEnReg, 0xF7)
         self._write(self.ComIrqReg, 0x7F)
         self._write(self.FIFOLevelReg, 0x80)
         for b in send_data:
@@ -147,6 +144,11 @@ class MFRC522:
                 return bytes([self._read(self.CRCResultLReg), self._read(self.CRCResultHReg)])
         return b"\x00\x00"
 
+    def _halt(self):
+        frame = bytes([self.PICC_HALT, 0x00])
+        crc = self._calculate_crc(frame)
+        self._transceive(frame + crc, timeout_ms=10)
+
     def anticoll_level(self, command):
         self._write(self.CollReg, 0x80)
         self._write(self.BitFramingReg, 0x00)
@@ -172,7 +174,7 @@ class MFRC522:
             if status != self.STATUS_OK:
                 return None
 
-        status, part1, sak = self.anticoll_level(self.PICC_ANTICOLL_CL1)
+        status, part1, _ = self.anticoll_level(self.PICC_ANTICOLL_CL1)
         if status != self.STATUS_OK:
             return None
 
@@ -180,6 +182,9 @@ class MFRC522:
             status, part2, _ = self.anticoll_level(self.PICC_ANTICOLL_CL2)
             if status != self.STATUS_OK:
                 return None
-            return bytes(part1[1:4] + part2)
+            uid = bytes(part1[1:4] + part2)
+        else:
+            uid = bytes(part1)
 
-        return bytes(part1)
+        self._halt()
+        return uid
