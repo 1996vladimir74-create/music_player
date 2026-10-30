@@ -1,11 +1,11 @@
-# microSD structure
+# SD card
 
-Format: FAT32.
+Использовать microSD 16 или 32 GB, FAT32.
 
-Use two-digit folder names and three-digit track names:
+## Структура
 
 ```text
-SD CARD
+SD ROOT
 ├── 01
 │   ├── 001.mp3
 │   ├── 002.mp3
@@ -21,8 +21,23 @@ SD CARD
     └── ...
 ```
 
-DFPlayer supports numbered folders and `playFolder(folder, file)`. The firmware uses that addressing mode instead of global `next()` / `previous()`, because global navigation could leave the active album.
+Папка `01` — альбом первого физического диска, `02` — второго и т.д.
 
-Recommended album size: 10-15 tracks.
+Имена файлов должны быть числовыми: `001.mp3`, `002.mp3`, `003.mp3` и т.д. Для проекта разумный размер альбома — около 10–15 треков.
 
-Do not put unrelated audio files in the numbered folders.
+## Первый запуск
+
+UID не нужно вручную прописывать в Python-код.
+
+1. Подготовить папку `01`.
+2. Вставить SD в DFPlayer.
+3. Запустить проигрыватель.
+4. Поставить первый NTAG215 на RC522.
+5. Его UID автоматически сохранится в `tagmap.json` как папка `01`.
+6. Следующий новый NTAG215 получит `02`.
+
+После назначения не менять NTAG между физическими дисками.
+
+## Важно
+
+Прошивка запрашивает количество файлов активной папки у DFPlayer. Если конкретный экземпляр DFPlayer не отвечает на этот запрос, используется резервное значение 15 треков. Поэтому для первого теста лучше сделать в каждой папке 10–15 файлов с последовательной нумерацией.
