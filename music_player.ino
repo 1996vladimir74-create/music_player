@@ -86,8 +86,7 @@ bool encoderButtonHandled = false;
 enum AnalogButton : uint8_t {
   BTN_NONE,
   BTN_PREVIOUS,
-  BTN_NEXT,
-  BTN_BOTH
+  BTN_NEXT
 };
 AnalogButton analogButtonLast = BTN_NONE;
 unsigned long analogButtonChangedMs = 0;
@@ -187,7 +186,6 @@ bool updateTrackCount() {
     return true;
   }
 
-  // Safe fallback for unusual clones / slow SD initialization.
   currentTrackCount = 15;
   return false;
 }
@@ -363,12 +361,12 @@ AnalogButton readAnalogButton() {
   int raw = analogRead(BUTTON_ADC_PIN);
 
   // 3.3V -> 1k -> A0
-  // PREV -> 330R -> GND  ~= 0.82V
-  // NEXT -> 1k  -> GND  ~= 1.65V
-  // No press          ~= 3.3V
-  if (raw < 220) return BTN_BOTH;
-  if (raw >= 220 && raw < 390) return BTN_PREVIOUS;
-  if (raw >= 440 && raw < 650) return BTN_NEXT;
+  // PREV -> direct to GND  ~= 0V
+  // NEXT -> 330R -> GND     ~= 0.82V
+  // No press               ~= 3.3V
+  // This uses only the already-approved 1k and 330-470R parts.
+  if (raw < 100) return BTN_PREVIOUS;
+  if (raw >= 200 && raw < 390) return BTN_NEXT;
   return BTN_NONE;
 }
 
@@ -380,7 +378,7 @@ void handleAnalogButtons() {
     analogButtonLast = now;
   }
 
-  if (now != BTN_NONE && now != BTN_BOTH &&
+  if (now != BTN_NONE &&
       millis() - analogButtonChangedMs > BUTTON_DEBOUNCE) {
     if (!analogButtonHandled) {
       if (now == BTN_PREVIOUS) previousTrack();
