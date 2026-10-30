@@ -1,84 +1,141 @@
-# Final wiring checklist
+# WIRING — финальная распайка MicroPython
 
-## RC522
+**Плата:** NodeMCU V3 LoLin ESP8266.
 
-```text
-RC522        NodeMCU
-SDA/SS  ->   D8
-SCK     ->   D5
-MOSI    ->   D7
-MISO    ->   D6
-RST     ->   3.3V
-3.3V    ->   3V3
-GND     ->   GND
-```
+Эта распайка соответствует `config.py` и `main.py`.
 
-## DFPlayer Mini
+## 1. RC522 / MFRC522
 
-```text
-DFPlayer      NodeMCU
-RX       <-   D2 through 1 kOhm
-TX       ->   RX
-VCC      <-   5V bus
-GND      ->   GND
-SPK1     ->   speaker wire 1
-SPK2     ->   speaker wire 2
-```
+| RC522 | NodeMCU |
+|---|---|
+| 3.3V | 3V3 |
+| GND | GND |
+| SDA/SS | D8 / GPIO15 |
+| SCK | D5 / GPIO14 |
+| MOSI | D7 / GPIO13 |
+| MISO | D6 / GPIO12 |
+| RST | 3V3 |
+| IRQ | не подключать |
 
-Do not connect SPK1 or SPK2 to GND.
+RC522 питается только от 3.3 V.
 
-## EC11 encoder
+## 2. DFPlayer Mini
 
-```text
-EC11         NodeMCU
-A       ->   D1
-B       ->   D3
-SW      ->   D4
-GND     ->   GND
-```
+| DFPlayer | NodeMCU |
+|---|---|
+| VCC | 5 V BUS от IP5306 |
+| GND | общий GND |
+| RX | D4 / GPIO2 через 1 kΩ |
+| TX | RX / GPIO3 |
+| SPK1 | один провод динамика 4 Ω / 3 W |
+| SPK2 | второй провод динамика |
 
-The firmware enables internal pull-ups. Encoder must be released during reset/upload.
+**SPK1 и SPK2 не соединять с GND.**
 
-## Track buttons
+DFPlayer получает команды через UART1 TX GPIO2. Ответы и события читаются через UART0 RX GPIO3. GPIO1 не используется для передачи команд DFPlayer.
 
-The two buttons share A0 through the already-approved resistor ladder. Only one 1 kOhm and one 330-470 Ohm resistor are used.
+## 3. WS2812B 8 LED
 
-```text
-3.3V --- 1 kOhm --- A0
-                    |
-                    +--- button PREVIOUS ---------------- GND
-                    |
-                    +--- button NEXT ------- 330-470 Ohm - GND
-```
+| Ring | NodeMCU / питание |
+|---|---|
+| 5V | 5 V BUS |
+| GND | общий GND |
+| DATA IN | TX / GPIO1 |
 
-The firmware recognizes the two voltage regions. This uses exactly the approved resistor markings and does not add a new resistor value.
+Кольцо имеет 8 светодиодов.
 
-## Motor
+## 4. EC11
 
-```text
-5V BUS  -> motor +
-motor - -> HW-532/LR7843 motor output
-HW-532 control/input -> D0
-HW-532 GND -> GND
-```
+| EC11 | NodeMCU |
+|---|---|
+| A | D1 / GPIO5 |
+| B | D3 / GPIO0 |
+| SW | D2 / GPIO4 |
+| GND | GND |
 
-Place the 1N5819 flyback diode across the motor terminals according to the diode orientation shown for the approved MOSFET module circuit.
+Используются внутренние pull-up ESP8266.
 
-## WS2812B ring
+**При включении и сбросе не нажимать EC11:** GPIO0 является boot strap pin.
+
+## 5. Две большие кнопки — один вход A0
+
+Используются утверждённые 1 kΩ и 330–470 Ω.
 
 ```text
-WS2812 5V   -> 5V BUS
-WS2812 GND  -> GND
-WS2812 DATA -> TX / GPIO1 through 330-470 Ohm
+3.3V
+  |
+  1 kΩ
+  |
+  +---------- A0 / ADC0
+  |             |
+  |             +----[ PREVIOUS ]---- GND
+  |
+  +----[ 330–470 Ω ]----[ NEXT ]---- GND
 ```
 
-## Power
+Логика:
+
+- PREVIOUS нажата → A0 почти 0 V.
+- NEXT нажата → A0 примерно 0.7–1.0 V в зависимости от фактического резистора.
+- ничего не нажато → A0 около 3.3 V на NodeMCU.
+
+В `config.py` пороги уже выставлены для этого диапазона. Если после сборки конкретный NodeMCU показывает другой диапазон, пороги можно откалибровать по ADC, но дополнительные компоненты не нужны.
+
+## 6. Motor + HW-532 / LR7843
 
 ```text
-USB-C -> IP5306
-Battery -> IP5306 B+ / B-
-IP5306 5V -> 5V BUS
-IP5306 GND -> common GND
+5 V BUS
+  |
+ GA12-N20
+  |
+ MOSFET power path
+  |
+ GND
 ```
 
-Keep the 470-1000 uF capacitor on the 5V bus close to the DFPlayer/WS2812 supply area and the 100 uF local decoupling close to the modules as previously planned.
+Управляющий вход HW-532/LR7843:
+
+```text
+NodeMCU D0 / GPIO16 -> control/input HW-532
+NodeMCU GND        -> GND HW-532
+```
+
+1N5819 устанавливается параллельно мотору как flyback diode:
+
+```text
+катод -> +5 V
+анод  -> сторона мотора / MOSFET
+```
+
+## 7. Питание
+
+```text
+USB-C
+   |
+   v
+IP5306
+   |------ B+ / B- ------ Li-Po 3.7 V 2000 mAh
+   |
+   +------ 5 V BUS -------------------------------+
+                                                  |
+             +-------------------+----------------+----------------+
+             |                   |                |                |
+         NodeMCU VIN         DFPlayer VCC      WS2812 5V       Motor +
+             |                   |                |                |
+            3.3V               speaker           ring           GA12-N20
+             |
+           RC522
+```
+
+Все GND должны быть общими.
+
+470–1000 µF ставится на 5 V BUS. 100 µF и 0.1 µF используются в согласии с ранее утверждённой схемой питания.
+
+## 8. Важное перед включением
+
+1. Проверить отсутствие короткого замыкания между 5 V и GND.
+2. RC522 проверить на 3.3 V, не на 5 V.
+3. Динамик подключить только между SPK1/SPK2.
+4. Не подключать IRF520N — в проекте используется HW-532/LR7843.
+5. При первой прошивке не нажимать EC11.
+6. После установки Python-файлов сначала проверить питание и SD/DFPlayer, затем NFC и управление.
