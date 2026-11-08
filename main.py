@@ -63,7 +63,8 @@ class TagDatabase:
 
 
 class Encoder:
-    # GPIO0 is a boot strap pin. The internal pull-up keeps it HIGH at boot.
+    # GPIO0 is used only by the encoder push button (SW), not by channel B.
+    # Its internal pull-up keeps it HIGH; do not press the encoder at power-on/reset.
     SEQ = {
         0: {1: 1, 2: -1},
         1: {3: 1, 0: -1},
