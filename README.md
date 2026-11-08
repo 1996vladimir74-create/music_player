@@ -79,8 +79,8 @@ music_player/
 | DFPlayer RX | TX | GPIO1 через 1 kΩ |
 | DFPlayer TX | RX | GPIO3 |
 | EC11 A | D1 | GPIO5 |
-| EC11 B | D3 | GPIO0 |
-| EC11 SW | D2 | GPIO4 |
+| EC11 B | D2 | GPIO4 |
+| EC11 SW button | D3 | GPIO0, second button contact to GND |
 | Motor control | D0 | GPIO16 |
 | WS2812 DATA | D4 | GPIO2 |
 | Previous/Next | A0 | ADC0 |
@@ -162,7 +162,7 @@ dfplayer.py
 
 ## Важное по boot-пинам
 
-GPIO0 используется EC11 B и является boot strap pin. На EC11 используется внутренний pull-up, поэтому **при включении/сбросе не нажимать EC11**.
+GPIO0 используется только кнопкой EC11 SW и является boot strap pin. Кнопка замыкает D3/GPIO0 на GND; второй контакт кнопки подключается к GND. На входе используется внутренний pull-up, поэтому **при включении/сбросе не нажимать EC11**. Канал B перенесён на D2/GPIO4.
 
 GPIO2 используется DATA кольца WS2812 и должен оставаться HIGH во время запуска ESP8266. Не подключать DATA кольца к GND.
 
