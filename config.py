@@ -12,9 +12,11 @@ DFPLAYER_TX_PIN = 1    # TX / GPIO1 -> DFPlayer RX through approved 1 kOhm
 DFPLAYER_BAUD = 9600
 
 # EC11 encoder
+# A/B are quadrature outputs; SW is the push button.
+# GPIO0 is a boot-strap pin: do not press the encoder during power-on/reset.
 ENCODER_A_PIN = 5      # D1 / GPIO5
-ENCODER_B_PIN = 0      # D3 / GPIO0
-ENCODER_SW_PIN = 4     # D2 / GPIO4
+ENCODER_B_PIN = 4      # D2 / GPIO4
+ENCODER_SW_PIN = 0     # D3 / GPIO0, button contact switches to GND
 ENCODER_DIRECTION = 1
 
 # Motor / LEDs
