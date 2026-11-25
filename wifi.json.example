@@ -1,0 +1,7 @@
+{
+  "ssid": "YOUR_WIFI_NAME",
+  "password": "YOUR_WIFI_PASSWORD",
+  "webrepl_password": "4to9char",
+  "ip": ["192.168.1.50", "255.255.255.0", "192.168.1.1", "192.168.1.1"],
+  "ap_password": "optional-min-8-chars"
+}
